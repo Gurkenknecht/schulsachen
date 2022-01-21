@@ -10,7 +10,7 @@
 #include <string>
 #include <math.h>   
 
-#define MAX_AMMO	8
+#define MAX_AMMO	5
 #define MAX_HANDO	1
 #define MAX_THE_WORLD_LENGHT	3
 #define MAX_THE_WORLD_NUTZUNGEN	1
@@ -18,14 +18,15 @@
 class Forgotten : public Bauer
 {
 protected:
+
 	int  armor;		// reduces the damage Heros gets
 	char block;		// is blocking active?
 	char spaste;
 	char bullet;
 	
-	bool isMoving, pick;
+	bool isMoving, pick,isAttacked;
 	int ammoAnz, kostenStark,kostenMittel,kostenleicht;//AmmoAnzahl und die Kosten der einzelnen Schüsse
-	int anzHando, worldDauer,worldAnz;//Za Hando und andere Fähigkeiten-Ressourcen
+	int anzHando, worldDauer,worldAnz, trueHP;//Za Hando und andere Fähigkeiten-Ressourcen
 	int spek, xSin,yCos; //Farbe und Variablen für Funktionen
 public:
 	
@@ -36,7 +37,6 @@ public:
 		
 		life       = MAX_LIFE/2;
 		damage     = STD_DAMAGE;
-		armor      = STD_DAMAGE/4;
 		range      = 80;
 		mana       = MAX_MANA;
 		move       = MAX_MOVE/2+1;
@@ -58,8 +58,13 @@ public:
 		worldAnz = MAX_THE_WORLD_NUTZUNGEN;
 		worldDauer = COOLDOWN;
 		anzHando = MAX_HANDO;
-		
+		isAttacked=false;
+		trueHP=life;
 	}
+	
+	
+
+
   /**/
  	void HKreis(int x0, int y0, int radius, char zeichen)
 	{
@@ -99,13 +104,11 @@ public:
 		Text(x,25,"                                      ");
 	}
     
-	void ShowBlocking()
-	{
 	
-    }	// END Blocking()
-		//pAt
+	//pAt
 	virtual void Attack()
 	{
+		isAttacked =false;
 		ClearText();
 		int penality;
 		Text(x,27,"1 = Stark(Kosten=3) "); 
@@ -260,7 +263,7 @@ int BulletCount(int bulletVerbrauch)
   
   virtual void ShowVictory() 
   {
-  	PlaySound(TEXT("SoundEffects\\Win.wav"), NULL,SND_ASYNC);
+  	PlaySound(TEXT("SoundEffects\\Dead.wav"), NULL,SND_ASYNC);
   	Sleep(100);
   	
 
@@ -269,15 +272,11 @@ int BulletCount(int bulletVerbrauch)
 	Sleep(100);
 	ShowMan();
 	}
-	
-  
-  	
-  	
   }
   
 	void EndOfEverything()
 	{
-		PlaySound(TEXT("SoundEffects\\GIO.wav"), NULL,SND_ASYNC);
+		PlaySound(TEXT("SoundEffects\\Dead.wav"), NULL,SND_ASYNC);
 		
 		setcolor(RED);
 		Text(x,25,"Du Hast das Ende erreicht");
@@ -318,10 +317,29 @@ int BulletCount(int bulletVerbrauch)
 		ShowMan();
 		enemy->life=0;
 	}
+	
+	
+	void Schutz()
+	{
+		life = trueHP;
+	}
+	
     /***/
      virtual void ShowDeath()
     {
-    	if( life > 0) return;  // still alive
+    
+    	if( life > 0)
+		{
+			if(isAttacked ==false)
+    		{
+    		Schutz();
+    		ClearText();
+    		Text(x,26,"Effekt neutralisiert");
+    		enemy->life=0;
+			}
+			
+		 return;
+		}  // still alive
     	ShowMan();
     	bool played= PlaySound(TEXT("SoundEffects\\Dead.wav"), NULL,SND_ASYNC);
     	Sleep(1000);
@@ -335,6 +353,7 @@ int BulletCount(int bulletVerbrauch)
 		Clear();
 	}
     
+   
     
     int BeAttacked()
     {
@@ -345,13 +364,18 @@ int BulletCount(int bulletVerbrauch)
 			ShowLife();
 			return 0;
 		}
-    	if(damage > 60)
+    	if(damage > 10)
     	{
     		EndOfEverything();
     		return 0;
 		}
     	damage -= armor;
     	life -= damage;
+    	trueHP = life;
+    	
+    	//AAAAAAAAAAAAAATTTTACCCKEEEEED
+    	isAttacked=true;
+    	
     	ShowLife();
     	return damage;
     }
@@ -376,7 +400,7 @@ int BulletCount(int bulletVerbrauch)
  
  virtual void Move(int wohin)
     {
-    	
+    	isAttacked =false;
     	ClearText();
     	Text(x,26,"druecke A um anzugreifen");
     	Text(x,25," und deine bewegung zu verkleinern");
@@ -394,7 +418,14 @@ int BulletCount(int bulletVerbrauch)
     	spaste = getch();
     	if(spaste =='a')
 		{
-		Attack();
+		damage =4;
+		enemy->ShowBlock();
+        ShowAttack();
+        enemy->BeAttacked();
+        enemy->ClearBlock();
+        enemy->Show();
+    	ShowLife();
+    	damage=0;
 		     if(wohin > +move) wohin = +move;
        		 if(wohin < -move) wohin = -move;
         
@@ -468,6 +499,7 @@ int BulletCount(int bulletVerbrauch)
     
     virtual void ShowLife()
 	{
+	
 		int i;
 		short x,y;
 		char zeile[WIDTH+1];
@@ -516,12 +548,18 @@ int BulletCount(int bulletVerbrauch)
 		gotoxy(x,y+2);
 		cout << "Ammo: "<<zeile;
 	}
-    
+	
+	
+	
+	
+	
+  
+	
     //MAGIE STUFF
     //pMag
      virtual void Magic()
 	{
-		
+		isAttacked =false;
 		int zaHoehe=16, zaRadius=17, zaReichweite=30;
 		Text(x,27,"r=Nachladen");
 		Text(x,26,"z=ZA HANDO");
@@ -534,7 +572,7 @@ int BulletCount(int bulletVerbrauch)
 				ClearText();
 				worldDauer = MAX_THE_WORLD_LENGHT;
 				worldAnz--;
-				PlaySound(TEXT("SoundEffects\\TheWorld.wav"), NULL,SND_ASYNC);
+				PlaySound(TEXT("SoundEffects\\Dead.wav"), NULL,SND_ASYNC);
 				
 				setcolor(YELLOW);
 				Kreis(x,30,4,219);
@@ -563,13 +601,16 @@ int BulletCount(int bulletVerbrauch)
 				break;
 				
 			}
-			case 'r': ammoAnz=MAX_AMMO; 
+		//Nachladen
+			case 'r': ammoAnz=MAX_AMMO;
 			ShowLife();
 			break;
+			
+			
 			case'z': 
 			if(anzHando!=0)
 			{			
-			PlaySound(TEXT("SoundEffects\\ZaHando.wav"), NULL,SND_ASYNC);
+			PlaySound(TEXT("SoundEffects\\Dead.wav"), NULL,SND_ASYNC);
 			setcolor(BLUE);
 			Sleep(1000);
 			HKreis(-(enemy->x+21),zaHoehe,zaRadius,219);
